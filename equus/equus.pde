@@ -20,6 +20,7 @@ public class EquusImage
     private int _one_third;
     private int _state;
     private int _fade_cnt;
+    private int _visible_timeout;
     private double _fade_step;
     private boolean _alive;
     /* scale */
@@ -39,6 +40,7 @@ public class EquusImage
     public void init(PImage img, int length)
     {
         _image = img;
+        _visible_timeout = 5;
         _pixel_cnt = _image.width * _image.height;
         _length = length;
         _one_third = length / 3;
@@ -51,8 +53,8 @@ public class EquusImage
         _orig_scale = random(1, 11) / 10.0;
         _final_scale = random(1, 21) / 10.0;
         _step_scale = (_final_scale - _orig_scale) / (float)_length;
-        _x_offset = random((_image.width / 2), width - (_image.width / 2));
-        _y_offset = random((_image.height / 2), height - (_image.height / 2));
+        _x_offset = random((_image.width / -2), width + (_image.width / 2));
+        _y_offset = random((_image.height / -2), height + (_image.height / 2));
         /* X vector */
         if (_x_offset <= _image.width)
         {
@@ -60,7 +62,7 @@ public class EquusImage
         } else
         if (_x_offset >= (width - _image.width))
         {
-            _x_vector = random(-0, -11) / 20.0;
+            _x_vector = random(0, 11) / -20.0;
         } else
         {
             _x_vector = random(-10, 11) / 20.0;
@@ -72,7 +74,7 @@ public class EquusImage
         } else
         if (_y_offset >= (height - _image.height))
         {
-            _y_vector = random(-0, -11) / 20.0;
+            _y_vector = random(0, 11) / -20.0;
         } else
         {
             _y_vector = random(-10, 11) / 20.0;
@@ -84,7 +86,18 @@ public class EquusImage
 
     public boolean is_alive()
     {
-        return _alive;
+        return _alive && (_visible_timeout > 0);
+    }
+
+    public boolean is_visible()
+    {
+        // XXX: this is stupid
+        loadPixels();
+        for(int i = 0; i < (width * height); ++i)
+        {
+            if (pixels[i] != 0) { return true; }
+        }
+        return false;
     }
 
     public void draw()
@@ -118,6 +131,10 @@ public class EquusImage
         rotate(_rotate);
         image(_canvas, (int)_x_offset, (int)_y_offset, _canvas.width, _canvas.height);
         popMatrix();
+        if(!is_visible())
+        {
+            _visible_timeout -= 1;
+        }
     }
 
     private void fade_in()
@@ -153,7 +170,7 @@ void setup()
     size(640, 480);
     frameRate(30);
     fs = new FullScreen(this);
-    fs.enter();
+    //fs.enter();
 
     for(int idx = 0; idx < EYE_COUNT; ++idx)
     {
