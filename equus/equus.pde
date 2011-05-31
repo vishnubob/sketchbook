@@ -1,125 +1,196 @@
-import sprites.*;
+import fullscreen.*; 
 
 final int EYE_COUNT = 6;
 
-PImage[]    images;
-String[]    files;
 int         prev_img;
 int         next_img;
 int         timer;
-ImageFader  imf = new ImageFader();
+int         _state;
+PImage[]    images = new PImage[EYE_COUNT];
+EquusImage  ek = new EquusImage();
+FullScreen  fs; 
 
-// sprites
-Sprite[] eyes = new Sprite[EYE_COUNT];
+public class EquusImage
+{
+    private PImage _image;
+    private PImage _canvas;
+    private int _length;
+    private int _pixel_cnt;
+    private int _frame_number;
+    private int _one_third;
+    private int _state;
+    private int _fade_cnt;
+    private double _fade_step;
+    private boolean _alive;
+    /* scale */
+    private float _scale;
+    private float _orig_scale;
+    private float _final_scale;
+    private float _step_scale;
+    /* movement */
+    double _x_offset;
+    double _y_offset;
+    double _x_vector;
+    double _y_vector;
+    /* rotation */
+    float _step_rotate = 0;
+    float _rotate = 0;
 
+    public void init(PImage img, int length)
+    {
+        _image = img;
+        _pixel_cnt = _image.width * _image.height;
+        _length = length;
+        _one_third = length / 3;
+        _fade_step = 1.0 / _one_third;
+        _frame_number = 0;
+        _alive = true;
+        _state = 0;
+        _fade_cnt = 0;
+        _canvas = new PImage(_image.width, _image.height);
+        _orig_scale = random(1, 11) / 10.0;
+        _final_scale = random(1, 21) / 10.0;
+        _step_scale = (_final_scale - _orig_scale) / (float)_length;
+        _x_offset = random((_image.width / 2), width - (_image.width / 2));
+        _y_offset = random((_image.height / 2), height - (_image.height / 2));
+        /* X vector */
+        if (_x_offset <= _image.width)
+        {
+            _x_vector = random(0, 11) / 20.0;
+        } else
+        if (_x_offset >= (width - _image.width))
+        {
+            _x_vector = random(-0, -11) / 20.0;
+        } else
+        {
+            _x_vector = random(-10, 11) / 20.0;
+        }
+        /* Y vector */
+        if (_y_offset <= _image.height)
+        {
+            _y_vector = random(0, 11) / 20.0;
+        } else
+        if (_y_offset >= (height - _image.height))
+        {
+            _y_vector = random(-0, -11) / 20.0;
+        } else
+        {
+            _y_vector = random(-10, 11) / 20.0;
+        }
+        /* rotate */
+        _step_rotate = ((2 * PI) / random(1000, 2000)) * random(-1, 2);
+        _rotate = 0;
+    }
+
+    public boolean is_alive()
+    {
+        return _alive;
+    }
+
+    public void draw()
+    {
+        if (_state == 0)
+        {
+            fade_in();
+        } else
+        if (_state == 1)
+        {
+        } else
+        if (_state == 2)
+        {
+            fade_out();
+        } else
+        {
+            _alive = false;
+        }
+        _frame_number += 1;
+        if (_frame_number > (_one_third * (_state + 1)))
+        {
+            _state += 1;
+            _fade_cnt = 0;
+        }
+        pushMatrix();
+        _scale = _step_scale * _frame_number + _orig_scale;
+        _x_offset += _x_vector;
+        _y_offset += _y_vector;
+        scale(_scale);
+        _rotate += _step_rotate;
+        rotate(_rotate);
+        image(_canvas, (int)_x_offset, (int)_y_offset, _canvas.width, _canvas.height);
+        popMatrix();
+    }
+
+    private void fade_in()
+    {
+        _canvas.loadPixels();
+        for(int px = 0; px < _pixel_cnt; ++px)
+        {
+            int rgb[] = unpack_rgb(_image.pixels[px]);
+            scale_rgb_array(rgb, _fade_step * _frame_number);
+            _canvas.pixels[px] = pack_rgb(rgb);
+        }
+        _canvas.updatePixels();
+        _fade_cnt += 1;
+    }
+
+    private void fade_out()
+    {
+        _canvas.loadPixels();
+        for(int px = 0; px < _pixel_cnt; ++px)
+        {
+            int rgb[] = unpack_rgb(_image.pixels[px]);
+            scale_rgb_array(rgb, 1 - _fade_step * _fade_cnt);
+            _canvas.pixels[px] = pack_rgb(rgb);
+        }
+        _canvas.updatePixels();
+        _fade_cnt += 1;
+    }
+}
 
 void setup() 
 {
-    size(700, 700);
-    files = new String[EYE_COUNT];
-    images = new PImage[EYE_COUNT];
+    noCursor();
+    size(640, 480);
+    frameRate(30);
+    fs = new FullScreen(this);
+    fs.enter();
 
     for(int idx = 0; idx < EYE_COUNT; ++idx)
     {
         String fn = "eye" + (idx + 1) + ".jpg";
-        eyes[idx] = Sprite(this, fn, 0);
+        images[idx] = loadImage(fn);
     }
 
-    randomSeed(0);
     prev_img = 0;
     timer = 0;
     _state = 0;
 }
-
-public class ImageFader
-{
-    private PImage _img1;
-    private PImage _img2;
-    private PImage _canvas;
-    private int _length;
-    private int _draw_idx;
-    private double _step;
-
-    public void load(PImage img1, PImage img2, int length)
-    {
-        _img1 = img1;
-        _img2 = img2;
-        _length = length;
-        _step = 1.0 / _length;
-        _draw_idx = 0;
-        assert (_img1.width == _img2.width);
-        assert (_img1.height == _img2.height);
-        try
-        {
-            _canvas = (PImage)_img1.clone();
-        } catch (java.lang.CloneNotSupportedException ex)
-        {
-            return;
-        }
-        //_canvas.resize(_img1.width, _img1.height);
-        //_img1.copy(_canvas, 0, 0, _img1.width, _img1.height, 0, 0, _img1.width, _img1.height);
-    }
-
-    public boolean is_drawing()
-    {
-        return (_draw_idx < _length);
-    }
-
-    public PImage draw()
-    {
-        int pixel_cnt = _img1.width * _img1.height;
-        _canvas.loadPixels();
-        for(int px = 0; px < pixel_cnt; ++px)
-        {
-            int rgb1[] = unpack_rgb(_img1.pixels[px]);
-            int rgb2[] = unpack_rgb(_img2.pixels[px]);
-            scale_rgb_array(rgb1, 1.0 - (_step * _draw_idx));
-            scale_rgb_array(rgb2, (_step * _draw_idx));
-            for(int idx = 0; idx < 3; ++idx)
-            {
-                rgb1[idx] = min(rgb1[idx] + rgb2[idx], 0xFF);
-            }
-            _canvas.pixels[px] = pack_rgb(rgb1);
-        }
-        _canvas.updatePixels();
-        _draw_idx += 1;
-        return _canvas;
-    }
-}
-
-int _state;
 
 void draw() 
 {
     if(_state == 0)
     {
         prev_img = next_img;
-        /*
         while(prev_img == next_img)
         {
-            next_img = (int)random(3);
+            next_img = (int)random(EYE_COUNT);
         }
-        */
-        next_img += 1;
-        next_img %= 3;
-        text("P " + prev_img + " N " + next_img, 20, 20);
-        imf.load(images[prev_img], images[next_img], 60 * 10);
+        ek.init(images[next_img], (int)random(100, 500));
         _state = 1;
-        //background(0);
-        //image(next_img, 0, 0, width, height);
+        background(0);
     } else
     {
-        if(imf.is_drawing())
+        if(ek.is_alive())
         {
-            //background(0);
-            image(imf.draw(), 0, 0, width, height);
-            text("P " + prev_img + " N " + next_img, 20, 20);
+            background(0);
+            ek.draw();
         } else
         {
             _state = 0;
         }
     }
 }
+
 
 int[] unpack_rgb(int color_value)
 {
@@ -149,4 +220,3 @@ void scale_rgb_array(int rgb[], double scale)
         rgb[idx] *= scale;
     }
 }
-
