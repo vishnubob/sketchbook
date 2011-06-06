@@ -1,4 +1,5 @@
 import fullscreen.*; 
+import processing.video.*;
 
 final int EYE_COUNT = 6;
 
@@ -6,10 +7,16 @@ int         prev_img;
 int         next_img;
 int         timer;
 int         _state;
-boolean     DrawEyes = false;
+boolean     AllStop = true;
+boolean     DrawField = false;
+boolean     DrawTV = false;
+float       FadeLevel;
+float       DrawEyes;
 PImage[]    images = new PImage[EYE_COUNT];
+PImage      field_image; 
 EquusImage  ek = new EquusImage();
 FullScreen  fs; 
+Movie       tv_movie;
 
 public class EquusImage
 {
@@ -30,18 +37,18 @@ public class EquusImage
     private float _final_scale;
     private float _step_scale;
     /* movement */
-    double _x_offset;
-    double _y_offset;
+    int _x_offset;
+    int _y_offset;
     double _x_vector;
     double _y_vector;
     /* rotation */
     float _step_rotate = 0;
     float _rotate = 0;
 
-    public void init(PImage img, int length)
+    public void init(PImage img, int length, float speed)
     {
         _image = img;
-        _visible_timeout = 10;
+        _visible_timeout = 2;
         _pixel_cnt = _image.width * _image.height;
         _length = length;
         _one_third = length / 3;
@@ -54,34 +61,42 @@ public class EquusImage
         _orig_scale = random(1, 11) / 10.0;
         _final_scale = random(1, 21) / 10.0;
         _step_scale = (_final_scale - _orig_scale) / (float)_length;
-        _x_offset = random((_image.width / -4), width + (_image.width / 4));
-        _y_offset = random((_image.height / -4), height + (_image.height / 4));
+        //_x_offset = random((_image.width / -4), width + (_image.width / 4));
+        //_y_offset = random((_image.height / -4), height + (_image.height / 4));
+        int _width_scale = (int)((float)_image.width * _orig_scale / 2.0);
+        int _height_scale = (int)((float)_image.height * _orig_scale / 2.0);
+        _x_offset = (width / 2) - _width_scale + (int)random(-10, 10);
+        _y_offset = (height / 2) - _height_scale + (int)random(-10, 10);
         /* X vector */
-        if (_x_offset <= _image.width)
+        if ((_x_offset + _width_scale) < (width / 2.0))
         {
-            _x_vector = random(0, 30) / 20.0;
-        } else
-        if (_x_offset >= (width - _image.width))
-        {
-            _x_vector = random(0, 30) / -20.0;
+            _x_vector = random(1, 30) / 20.0;
         } else
         {
-            _x_vector = random(-30, 30) / 20.0;
+            _x_vector = random(1, 30) / -20.0;
         }
         /* Y vector */
-        if (_y_offset <= _image.height)
+        if ((_y_offset + _height_scale) <= (height / 2.0))
         {
-            _y_vector = random(0, 30) / 20.0;
-        } else
-        if (_y_offset >= (height - _image.height))
-        {
-            _y_vector = random(0, 30) / -20.0;
+            _y_vector = random(1, 30) / 20.0;
         } else
         {
-            _y_vector = random(-30, 30) / 20.0;
+            _y_vector = random(1, 30) / -20.0;
         }
+        /* speed */
+        _x_vector *= speed;
+        _y_vector *= speed;
+        print("Offset: ");
+        print(_x_offset);
+        print(" ");
+        println(_y_offset);
+        print("Speed: ");
+        print(_x_vector);
+        print(" ");
+        println(_y_vector);
         /* rotate */
-        _step_rotate = ((2 * PI) / random(1000, 2000)) * random(-1, 2);
+        _step_rotate = ((2 * PI) / random(2000, 4000)) * random(-1, 2);
+        _step_rotate *= speed;
         _rotate = 0;
     }
 
@@ -100,7 +115,11 @@ public class EquusImage
         loadPixels();
         for(int i = 0; i < (width * height); ++i)
         {
-            if (pixels[i] != 0) { return true; }
+            int pixel = pixels[i];
+            if (red(pixel) != 0.0 || green(pixel) != 0.0 || blue(pixel) != 0.0)
+            { 
+                return true; 
+            }
         }
         return false;
     }
@@ -174,61 +193,157 @@ void setup()
     noCursor();
     size(1280, 720);
     frameRate(30);
-    fs = new FullScreen(this);
-    fs.enter();
+    //fs = new FullScreen(this);
+    //fs.enter();
 
     for(int idx = 0; idx < EYE_COUNT; ++idx)
     {
-        String fn = "eye" + (idx + 1) + ".jpg";
+        String fn = "horseeyes" + (idx + 1) + ".png";
         images[idx] = loadImage(fn);
     }
+    field_image = loadImage("pond2.jpg");
+    tv_movie = new Movie(this, "gijoe2.m4v");
+    tv_movie.stop();
 
     prev_img = 0;
     timer = 0;
     _state = 0;
 }
 
+void movieEvent(Movie m) 
+{
+    m.read();
+}
+
 void keyPressed()
 {
+    background(0);
+    if (key == ' ')
+    {
+        AllStop = true;
+        FadeLevel = 1;
+        DrawEyes = 0.0;
+        DrawField = false;
+        DrawTV = false;
+        tv_movie.stop();
+    } else
+    if (key == 'f')
+    {
+        AllStop = false;
+        DrawField = true;
+        DrawEyes = 0.0;
+        DrawTV = false;
+        tv_movie.stop();
+    } else
+    if (key == 't')
+    {
+        AllStop = false;
+        DrawTV = true;
+        DrawEyes = 0.0;
+        DrawField = false;
+        tv_movie.read();
+        tv_movie.play();
+        tv_movie.loop();
+    } else
     if (key == '1')
     {
-        DrawEyes = false;
+        AllStop = false;
+        _state = 0;
+        DrawEyes = 1.0;
+        tv_movie.stop();
+        DrawField = false;
+        DrawTV = false;
     } else
     if (key == '2')
     {
-        DrawEyes = true;
+        AllStop = false;
+        DrawEyes = 5.0;
+        _state = 0;
+        tv_movie.stop();
+        DrawField = false;
+        DrawTV = false;
+    } else
+    if (key == '3')
+    {
+        AllStop = false;
+        DrawEyes = 15.0;
+        _state = 0;
+        tv_movie.stop();
+        DrawField = false;
+        DrawTV = false;
     }
 }
 
 void draw() 
 {
-    if(DrawEyes == false)
+    if(AllStop)
     {
+        /*
+        if (FadeLevel >= 0)
+        {
+            FadeLevel -= .1;
+            fade_out_screen(FadeLevel);
+            return;
+        } else
+        {
+            background(0);
+            return;
+        }
+        */
         background(0);
         return;
     }
-
-    if(_state == 0)
+    
+    if(DrawField)
     {
-        prev_img = next_img;
-        while(prev_img == next_img)
-        {
-            next_img = (int)random(EYE_COUNT);
-        }
-        ek.init(images[next_img], (int)random(100, 500));
-        _state = 1;
-        background(0);
+        image(field_image, 0, 0, field_image.width, field_image.height);
     } else
+    if(DrawTV)
     {
-        if(ek.is_alive())
+        //image(tv_movie, -200, height - 30);
+        pushMatrix();
+        translate(-300, height - 50);
+        image(tv_movie, 0, 0);
+        popMatrix();
+    } else
+    if(DrawEyes > 0)
+    {
+        if(_state == 0)
         {
+            prev_img = next_img;
+            while(prev_img == next_img)
+            {
+                next_img = (int)random(EYE_COUNT);
+            }
+            int frames = (int)random(200, 500);
+            frames /= DrawEyes;
+            ek.init(images[next_img], frames, DrawEyes);
+            _state = 1;
             background(0);
-            ek.draw();
         } else
         {
-            _state = 0;
+            if(ek.is_alive())
+            {
+                background(0);
+                ek.draw();
+            } else
+            {
+                _state = 0;
+            }
         }
     }
+}
+
+void fade_out_screen(float value)
+{
+    loadPixels();
+    for(int px = 0; px < (width * height); ++px)
+    {
+        int rgb[] = unpack_rgb(pixels[px]);
+        scale_rgb_array(rgb, value);
+        pixels[px] = pack_rgb(rgb);
+    }
+    updatePixels();
 }
 
 
