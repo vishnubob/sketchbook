@@ -193,8 +193,8 @@ void setup()
     noCursor();
     size(1280, 720);
     frameRate(30);
-    //fs = new FullScreen(this);
-    //fs.enter();
+    fs = new FullScreen(this);
+    fs.enter();
 
     for(int idx = 0; idx < EYE_COUNT; ++idx)
     {
