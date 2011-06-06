@@ -86,6 +86,7 @@ public class EquusImage
         /* speed */
         _x_vector *= speed;
         _y_vector *= speed;
+        /*
         print("Offset: ");
         print(_x_offset);
         print(" ");
@@ -94,6 +95,7 @@ public class EquusImage
         print(_x_vector);
         print(" ");
         println(_y_vector);
+        */
         /* rotate */
         _step_rotate = ((2 * PI) / random(2000, 4000)) * random(-1, 2);
         _step_rotate *= speed;
@@ -302,7 +304,8 @@ void draw()
     {
         //image(tv_movie, -200, height - 30);
         pushMatrix();
-        translate(-300, height - 50);
+        translate(0, height - 50);
+        scale(.15);
         image(tv_movie, 0, 0);
         popMatrix();
     } else
