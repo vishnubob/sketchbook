@@ -6,6 +6,7 @@ int         prev_img;
 int         next_img;
 int         timer;
 int         _state;
+boolean     DrawEyes = false;
 PImage[]    images = new PImage[EYE_COUNT];
 EquusImage  ek = new EquusImage();
 FullScreen  fs; 
@@ -40,7 +41,7 @@ public class EquusImage
     public void init(PImage img, int length)
     {
         _image = img;
-        _visible_timeout = 5;
+        _visible_timeout = 10;
         _pixel_cnt = _image.width * _image.height;
         _length = length;
         _one_third = length / 3;
@@ -53,31 +54,31 @@ public class EquusImage
         _orig_scale = random(1, 11) / 10.0;
         _final_scale = random(1, 21) / 10.0;
         _step_scale = (_final_scale - _orig_scale) / (float)_length;
-        _x_offset = random((_image.width / -2), width + (_image.width / 2));
-        _y_offset = random((_image.height / -2), height + (_image.height / 2));
+        _x_offset = random((_image.width / -4), width + (_image.width / 4));
+        _y_offset = random((_image.height / -4), height + (_image.height / 4));
         /* X vector */
         if (_x_offset <= _image.width)
         {
-            _x_vector = random(0, 11) / 20.0;
+            _x_vector = random(0, 30) / 20.0;
         } else
         if (_x_offset >= (width - _image.width))
         {
-            _x_vector = random(0, 11) / -20.0;
+            _x_vector = random(0, 30) / -20.0;
         } else
         {
-            _x_vector = random(-10, 11) / 20.0;
+            _x_vector = random(-30, 30) / 20.0;
         }
         /* Y vector */
         if (_y_offset <= _image.height)
         {
-            _y_vector = random(0, 11) / 20.0;
+            _y_vector = random(0, 30) / 20.0;
         } else
         if (_y_offset >= (height - _image.height))
         {
-            _y_vector = random(0, 11) / -20.0;
+            _y_vector = random(0, 30) / -20.0;
         } else
         {
-            _y_vector = random(-10, 11) / 20.0;
+            _y_vector = random(-30, 30) / 20.0;
         }
         /* rotate */
         _step_rotate = ((2 * PI) / random(1000, 2000)) * random(-1, 2);
@@ -86,7 +87,11 @@ public class EquusImage
 
     public boolean is_alive()
     {
-        return _alive && (_visible_timeout > 0);
+        if (_state > 0 && _visible_timeout < 0)
+        {
+            return false;
+        }
+        return _alive;
     }
 
     public boolean is_visible()
@@ -167,10 +172,10 @@ public class EquusImage
 void setup() 
 {
     noCursor();
-    size(640, 480);
+    size(1280, 720);
     frameRate(30);
     fs = new FullScreen(this);
-    //fs.enter();
+    fs.enter();
 
     for(int idx = 0; idx < EYE_COUNT; ++idx)
     {
@@ -183,8 +188,26 @@ void setup()
     _state = 0;
 }
 
+void keyPressed()
+{
+    if (key == '1')
+    {
+        DrawEyes = false;
+    } else
+    if (key == '2')
+    {
+        DrawEyes = true;
+    }
+}
+
 void draw() 
 {
+    if(DrawEyes == false)
+    {
+        background(0);
+        return;
+    }
+
     if(_state == 0)
     {
         prev_img = next_img;
