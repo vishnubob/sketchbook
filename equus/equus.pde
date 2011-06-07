@@ -3,12 +3,17 @@ import processing.video.*;
 
 final int EYE_COUNT = 6;
 
+final int FADE_IN = 1;
+final int FADE_STATIC = 2;
+final int FADE_OUT = 3;
+final int FADE_OFF = 0;
+
 int         prev_img;
 int         next_img;
 int         timer;
 int         _state;
 boolean     AllStop = true;
-boolean     DrawField = false;
+int         DrawField;
 boolean     DrawTV = false;
 float       FadeLevel;
 float       DrawEyes;
@@ -193,10 +198,11 @@ public class EquusImage
 void setup() 
 {
     noCursor();
-    size(1280, 720);
+    //size(1280, 720);
+    size(1440, 900);
     frameRate(30);
-    fs = new FullScreen(this);
-    fs.enter();
+    //fs = new FullScreen(this);
+    //fs.enter();
 
     for(int idx = 0; idx < EYE_COUNT; ++idx)
     {
@@ -217,62 +223,63 @@ void movieEvent(Movie m)
     m.read();
 }
 
+void AllOff()
+{
+    DrawEyes = 0.0;
+    DrawTV = false;
+    tv_movie.stop();
+    DrawField = FADE_OFF;
+}
+
 void keyPressed()
 {
-    background(0);
     if (key == ' ')
     {
-        AllStop = true;
-        FadeLevel = 1;
-        DrawEyes = 0.0;
-        DrawField = false;
-        DrawTV = false;
-        tv_movie.stop();
+        if (DrawField != FADE_OFF)
+        {
+            DrawField = FADE_OUT;
+            FadeLevel = 1.0;
+        } else
+        {
+            AllStop = true;
+            AllOff();
+        }
     } else
     if (key == 'f')
     {
+        AllOff();
         AllStop = false;
-        DrawField = true;
-        DrawEyes = 0.0;
-        DrawTV = false;
-        tv_movie.stop();
+        DrawField = FADE_IN;
+        FadeLevel = 0.0;
     } else
     if (key == 't')
     {
+        AllOff();
         AllStop = false;
-        DrawTV = true;
-        DrawEyes = 0.0;
-        DrawField = false;
         tv_movie.read();
         tv_movie.play();
         tv_movie.loop();
     } else
     if (key == '1')
     {
+        AllOff();
         AllStop = false;
         _state = 0;
         DrawEyes = 1.0;
-        tv_movie.stop();
-        DrawField = false;
-        DrawTV = false;
     } else
     if (key == '2')
     {
+        AllOff();
         AllStop = false;
-        DrawEyes = 5.0;
         _state = 0;
-        tv_movie.stop();
-        DrawField = false;
-        DrawTV = false;
+        DrawEyes = 5.0;
     } else
     if (key == '3')
     {
+        AllOff();
         AllStop = false;
-        DrawEyes = 15.0;
         _state = 0;
-        tv_movie.stop();
-        DrawField = false;
-        DrawTV = false;
+        DrawEyes = 15.0;
     }
 }
 
@@ -280,29 +287,40 @@ void draw()
 {
     if(AllStop)
     {
-        /*
-        if (FadeLevel >= 0)
-        {
-            FadeLevel -= .1;
-            fade_out_screen(FadeLevel);
-            return;
-        } else
-        {
-            background(0);
-            return;
-        }
-        */
         background(0);
         return;
     }
     
-    if(DrawField)
+    if(DrawField != FADE_OFF)
     {
-        image(field_image, 0, 0, field_image.width, field_image.height);
+        if (DrawField == FADE_IN)
+        {
+            FadeLevel += 0.05;
+            FadeLevel = min(FadeLevel, 1.0);
+            fade_image(field_image, FadeLevel);
+            if (FadeLevel >= 1.0)
+            {
+                DrawField = FADE_STATIC;
+            }
+        } else
+        if (DrawField == FADE_OUT)
+        {
+            FadeLevel -= 0.05;
+            FadeLevel = max(FadeLevel, 0.0);
+            fade_image(field_image, FadeLevel);
+            if (FadeLevel <= 0)
+            {
+                AllStop = true;
+                DrawField = FADE_OFF;
+            }
+        } else
+        if (DrawField == FADE_STATIC)
+        {
+            image(field_image, 0, 0, field_image.width, field_image.height);
+        }
     } else
     if(DrawTV)
     {
-        //image(tv_movie, -200, height - 30);
         pushMatrix();
         translate(0, height - 50);
         scale(.15);
@@ -337,16 +355,18 @@ void draw()
     }
 }
 
-void fade_out_screen(float value)
+void fade_image(PImage _image, float value)
 {
-    loadPixels();
-    for(int px = 0; px < (width * height); ++px)
+    PImage _canvas = new PImage(_image.width, _image.height);
+    _canvas.loadPixels();
+    for(int px = 0; px < _image.pixels.length; ++px)
     {
-        int rgb[] = unpack_rgb(pixels[px]);
+        int rgb[] = unpack_rgb(_image.pixels[px]);
         scale_rgb_array(rgb, value);
-        pixels[px] = pack_rgb(rgb);
+        _canvas.pixels[px] = pack_rgb(rgb);
     }
-    updatePixels();
+    _canvas.updatePixels();
+    image(_canvas, 0, 0);
 }
 
 
